@@ -5,16 +5,17 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v7"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/opensearch-project/opensearch-go/v2"
+	"github.com/sirupsen/logrus"
 )
 
-type NewHookFunc func(client *elasticsearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error)
+type NewHookFunc func(client *opensearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error)
 
 func TestSyncHook(t *testing.T) {
 	hookTest(NewElasticHook, "sync-log", t)
@@ -29,7 +30,7 @@ func TestBulkProcessorHook(t *testing.T) {
 }
 
 func hookTest(hookfunc NewHookFunc, indexName string, t *testing.T) {
-	if r, err := http.Get("http://127.0.0.1:7777"); err != nil {
+	if r, err := http.Get("http://localhost:7777"); err != nil {
 		log.Fatal("Elastic not reachable")
 	} else {
 		buf, _ := ioutil.ReadAll(r.Body)
@@ -37,8 +38,8 @@ func hookTest(hookfunc NewHookFunc, indexName string, t *testing.T) {
 		fmt.Println(string(buf))
 	}
 
-	client, err := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{"http://127.0.0.1:7777"},
+	client, err := opensearch.NewClient(opensearch.Config{
+		Addresses: []string{"http://localhost:7777"},
 	})
 
 	if err != nil {
@@ -130,8 +131,8 @@ func hookTest(hookfunc NewHookFunc, indexName string, t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	client, err := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{"http://127.0.0.1:7777"},
+	client, err := opensearch.NewClient(opensearch.Config{
+		Addresses: []string{"http://localhost:7777"},
 	})
 
 	if err != nil {

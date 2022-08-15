@@ -5,14 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"gopkg.in/go-extras/elogrus.v7/internal/bulk"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/elastic/go-elasticsearch/v7"
+	"github.com/elastic/go-elasticsearch/v7/esapi"
+	"gopkg.in/go-extras/elogrus.v7/internal/bulk"
+
+	"github.com/opensearch-project/opensearch-go/v2"
 	"github.com/sirupsen/logrus"
 )
 
@@ -29,7 +30,7 @@ type fireFunc func(entry *logrus.Entry, hook *ElasticHook) error
 // ElasticHook is a logrus
 // hook for ElasticSearch
 type ElasticHook struct {
-	client    *elasticsearch.Client
+	client    *opensearch.Client
 	host      string
 	index     IndexNameFunc
 	levels    []logrus.Level
@@ -51,7 +52,7 @@ type message struct {
 // host - host of system
 // level - log level
 // index - name of the index in ElasticSearch
-func NewElasticHook(client *elasticsearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
+func NewElasticHook(client *opensearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
 	return NewElasticHookWithFunc(client, host, level, func() string { return index })
 }
 
@@ -60,7 +61,7 @@ func NewElasticHook(client *elasticsearch.Client, host string, level logrus.Leve
 // host - host of system
 // level - log level
 // index - name of the index in ElasticSearch
-func NewAsyncElasticHook(client *elasticsearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
+func NewAsyncElasticHook(client *opensearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
 	return NewAsyncElasticHookWithFunc(client, host, level, func() string { return index })
 }
 
@@ -69,7 +70,7 @@ func NewAsyncElasticHook(client *elasticsearch.Client, host string, level logrus
 // host - host of system
 // level - log level
 // index - name of the index in ElasticSearch
-func NewBulkProcessorElasticHook(client *elasticsearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
+func NewBulkProcessorElasticHook(client *opensearch.Client, host string, level logrus.Level, index string) (*ElasticHook, error) {
 	return NewBulkProcessorElasticHookWithFunc(client, host, level, func() string { return index })
 }
 
@@ -80,7 +81,7 @@ func NewBulkProcessorElasticHook(client *elasticsearch.Client, host string, leve
 // host - host of system
 // level - log level
 // indexFunc - function providing the name of index
-func NewElasticHookWithFunc(client *elasticsearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
+func NewElasticHookWithFunc(client *opensearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
 	return newHookFuncAndFireFunc(client, host, level, indexFunc, syncFireFunc)
 }
 
@@ -91,7 +92,7 @@ func NewElasticHookWithFunc(client *elasticsearch.Client, host string, level log
 // host - host of system
 // level - log level
 // indexFunc - function providing the name of index
-func NewAsyncElasticHookWithFunc(client *elasticsearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
+func NewAsyncElasticHookWithFunc(client *opensearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
 	return newHookFuncAndFireFunc(client, host, level, indexFunc, asyncFireFunc)
 }
 
@@ -103,7 +104,7 @@ func NewAsyncElasticHookWithFunc(client *elasticsearch.Client, host string, leve
 // host - host of system
 // level - log level
 // indexFunc - function providing the name of index
-func NewBulkProcessorElasticHookWithFunc(client *elasticsearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
+func NewBulkProcessorElasticHookWithFunc(client *opensearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc) (*ElasticHook, error) {
 	fireFunc, err := makeBulkFireFunc(client)
 	if err != nil {
 		return nil, err
@@ -111,7 +112,7 @@ func NewBulkProcessorElasticHookWithFunc(client *elasticsearch.Client, host stri
 	return newHookFuncAndFireFunc(client, host, level, indexFunc, fireFunc)
 }
 
-func newHookFuncAndFireFunc(client *elasticsearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc, fireFunc fireFunc) (*ElasticHook, error) {
+func newHookFuncAndFireFunc(client *opensearch.Client, host string, level logrus.Level, indexFunc IndexNameFunc, fireFunc fireFunc) (*ElasticHook, error) {
 	var levels []logrus.Level
 	for _, l := range []logrus.Level{
 		logrus.PanicLevel,
@@ -208,7 +209,7 @@ func syncFireFunc(entry *logrus.Entry, hook *ElasticHook) error {
 
 // Create closure with bulk processor tied to fireFunc.
 // Note: garbage collector will never be able to free memory allocated for bulkWriters
-func makeBulkFireFunc(client *elasticsearch.Client) (fireFunc, error) {
+func makeBulkFireFunc(client *opensearch.Client) (fireFunc, error) {
 	bulkWriters := make(map[*ElasticHook]*bulk.Writer)
 	var lock sync.RWMutex
 
