@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v7/esapi"
-	"gopkg.in/go-extras/elogrus.v7/internal/bulk"
+	"github.com/mugambikimathi/elogrus/internal/bulk"
 
 	"github.com/opensearch-project/opensearch-go/v2"
 	"github.com/sirupsen/logrus"
