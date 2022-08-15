@@ -1,4 +1,4 @@
-module gopkg.in/go-extras/elogrus.v7
+module github.com/mugambikimathi/elogrus
 
 go 1.12
 
